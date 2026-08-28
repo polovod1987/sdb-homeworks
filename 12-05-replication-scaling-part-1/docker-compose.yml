@@ -1,0 +1,41 @@
+services:
+  mysql-primary:
+    image: mysql:8.4
+    container_name: mysql-primary-hw
+    environment:
+      MYSQL_ROOT_PASSWORD: root_password
+      MYSQL_DATABASE: replication_demo
+    ports:
+      - "3307:3306"
+    volumes:
+      - primary-data:/var/lib/mysql
+      - ./mysql/primary.cnf:/etc/mysql/conf.d/primary.cnf:ro
+      - ./mysql/init-primary.sql:/docker-entrypoint-initdb.d/01-init-primary.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-proot_password"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  mysql-replica:
+    image: mysql:8.4
+    container_name: mysql-replica-hw
+    environment:
+      MYSQL_ROOT_PASSWORD: root_password
+    ports:
+      - "3308:3306"
+    volumes:
+      - replica-data:/var/lib/mysql
+      - ./mysql/replica.cnf:/etc/mysql/conf.d/replica.cnf:ro
+    depends_on:
+      mysql-primary:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-proot_password"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+volumes:
+  primary-data:
+  replica-data:
